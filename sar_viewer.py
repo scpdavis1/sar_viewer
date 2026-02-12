@@ -1,16 +1,12 @@
 import matplotlib.pyplot as plt
 from sarpy.io.product.converter import open_product
-from sys import argv
+from sarpy.io.complex.converter import open_complex
 from gc import collect
 from argparse import ArgumentParser
 
-# input = '2023-11-10-17-01-39_UMBRA-04_SICD.nitf'
-# sidd_input = '2023-06-09-19-51-37_UMBRA-05_SIDD.nitf'
-# walrus = '2024-10-02-07-25-58_UMBRA-07_SIDD.nitf'
-# test_img = 'test_convert_to_sidd.nitf'
-# jeddah_tower = '2025-06-10-08-33-52_UMBRA-09_SIDD.nitf'
+import numpy as np
 
-def center_square(sidd_reader, size: int) -> tuple:
+def center_square(reader, size: int) -> tuple:
     """
     Given a size, make a square chip from the center.
     
@@ -20,7 +16,7 @@ def center_square(sidd_reader, size: int) -> tuple:
     :return: Description
     :rtype: tuple
     """
-    img_size = sidd_reader.data_size
+    img_size = reader.data_size
     center_xy = tuple([ x//2 for x in img_size ])
     radius = size//2
 
@@ -76,17 +72,55 @@ def view_sidd(path: str, size: int) -> None:
     plt.show()
     plt.close()
     collect()
+
+def view_sicd(path: str, size: int) -> None:
+    """
+    Given a SICD, plot the whole thing or a centered square chip.
+    
+    :param path: Description
+    :type path: str
+    :param size: Description
+    :type size: int
+    """
+    sicd_data = open_complex(path)
+    if size != None:
+        bounds = center_square(sicd_data, size)
+
+        sicd_data = sicd_data[
+            bounds[0]:bounds[1],
+            bounds[2]:bounds[3]
+        ]
+    else:
+        sicd_data = sicd_data[:]
+    
+    log_scale = 20 * np.log10(np.abs(sicd_data))
+    
+    plt.figure(figsize=(10, 10))
+    plt.imshow(log_scale, cmap='gray')
+    plt.title('SAR SICD Data')
+    plt.colorbar(label='db')
+    plt.show()
+    plt.close()
+    collect()
     
 if __name__ == "__main__":
 
     # Arg parser
     parser = ArgumentParser(
         prog='SIDDViewer',
-        description='View a SIDD.',
+        description='View a SIDD or SICD.',
     )
     parser.add_argument(
-        'sidd_path',
-        help="Path to a SIDD.",
+        'path',
+        help="Path to a SIDD or SICD.",
+    )
+    parser.add_argument(
+        '--sidd',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--sicd',
+        action='store_true'
     )
     parser.add_argument(
         '-s',
@@ -97,7 +131,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    view_sidd(
-        args.sidd_path,
-        size=args.size,
-    )
+    if args.sidd == args.sicd:
+        raise Exception("Choose a single image type.")
+
+    if args.sidd:
+        view_sidd(
+            args.path,
+            size=args.size,
+        )
+    else:
+        view_sicd(
+            args.path,
+            size=args.size
+        )
