@@ -1,36 +1,43 @@
 import matplotlib.pyplot as plt
 from sarpy.io.complex.converter import open_complex
 from sarpy.io.product.converter import open_product
+# from sarpy.io.complex.utils import get_min_max_complex
 import numpy as np
+from gc import collect
 
-input = '2023-11-10-17-01-39_UMBRA-04_SICD.nitf'
-sidd_input = '2023-06-09-19-51-37_UMBRA-05_SIDD.nitf'
-walrus = '2024-10-02-07-25-58_UMBRA-07_SIDD.nitf'
-test_img = 'test_convert_to_sidd.nitf'
-jeddah_tower = '2025-06-10-08-33-52_UMBRA-09_SIDD.nitf'
+input_sicd = '2023-06-09-19-51-37_UMBRA-05_SICD.nitf'
+
+sicd_reader = open_complex(input_sicd)
+size = sicd_reader.data_size
 
 
-x = [1, 2, 3, 4, 5]
-y = [1, 4, 9, 16, 25]
+sicd_data = sicd_reader[:]
+flat_max = np.argmax(sicd_data)
+row = flat_max // size[0]
+col = flat_max % size[0]
+print(row, col, flat_max)
 
-plt.figure(1)
-plt.plot(x, y)
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-plt.title('Simple Plot')
+slicex = sicd_data[row, :]
+slicey = sicd_data[:, col]
 
-reader = open_complex(input)[0:1000, 0:1000]
-image_data = 20 * np.log10(np.abs(reader))
-sidd_reader = open_product(sidd_input)[:]
 
-plt.figure(figsize=(10, 10))
-plt.imshow(image_data, cmap='gray')
-plt.title('SAR SICD Data')
-plt.colorbar(label='db')
+# print(slice)
+# log_scalex = 20 * np.log10(np.abs(slicex))
+# log_scaley = 20 * np.log10(np.abs(slicey))
 
-plt.figure(figsize=(10, 10))
-plt.imshow(sidd_reader, cmap='gray')
-plt.title('SAR SIDD Data')
-plt.colorbar(label='db')
+amplitudex = np.abs(slicex)
+amplitudey = np.abs(slicey)
 
+plt.figure()
+plt.plot(amplitudex, color='blue')
+plt.title('SICD slice x')
+
+plt.figure()
+plt.plot(amplitudey, color='green')
+plt.title('SICD slice y')
 plt.show()
+
+plt.close()
+collect()
+
+
